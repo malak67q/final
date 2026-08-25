@@ -1,5 +1,4 @@
 import { body, param, validationResult } from "express-validator";
-
 // Check validation errors
 export function handleValidationErrors(req, res, next) {
   const errors = validationResult(req);
@@ -30,8 +29,8 @@ export const loginValidation = [
 // Announcement validation
 export const announcementValidation = [
   param("id")
-    .notEmpty()
-    .withMessage("Station ID is required"),
+    .isMongoId()
+    .withMessage("Invalid station ID"),
 
   body("text")
     .trim()

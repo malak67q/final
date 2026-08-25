@@ -1,10 +1,9 @@
 // ===== SHARED UTILITIES FOR PASSENGER AND ADMIN =====
-// This file contains all the common code used by both pages
 
 // Train animation timing configuration
 export const TRAIN_CONFIG = {
-  STOP_TIME: 3000, // Stop at each station for 3 seconds
-  MOVE_TIME: 12000, // Move between stations in 12 seconds
+  STOP_TIME: 3000,
+  MOVE_TIME: 12000,
 };
 
 // Shared app state
@@ -20,11 +19,11 @@ export const appState = {
 // Move train to a specific station position
 export function updateTrainPosition(index, isMoving = false) {
   if (appState.stations.length === 0) return;
+  if (!appState.trainElement) return;
 
-  // Calculate position as percentage (0% to 100%)
-  const trainPosition = (index / (appState.stations.length - 1)) * 100;
+  const trainPosition =
+    (index / (appState.stations.length - 1)) * 100;
 
-  // If moving, use smooth animation, otherwise jump instantly
   if (isMoving) {
     appState.trainElement.style.transition = `left ${
       TRAIN_CONFIG.MOVE_TIME / 1000
@@ -33,169 +32,225 @@ export function updateTrainPosition(index, isMoving = false) {
     appState.trainElement.style.transition = "none";
   }
 
-  // Move train to calculated position
   appState.trainElement.style.left = `calc(${trainPosition}% - 24px)`;
+
   appState.currentTrainIndex = index;
-  appState.currentTrainStationId = appState.stations[index].id;
+  appState.currentTrainStationId =
+    appState.stations[index].id;
 }
 
-// Start the train animation loop
+// Start train animation
 export function startClientSideTrainAnimation() {
   if (appState.stations.length === 0) return;
 
   const moveToNextStation = () => {
-    // Train is stopped at current station
     updateTrainPosition(appState.currentTrainIndex, false);
 
-    // Wait at the station
     setTimeout(() => {
-      // Decide where train goes next
       if (appState.isMovingForward) {
-        // Going forward
-        if (appState.currentTrainIndex < appState.stations.length - 1) {
-          appState.currentTrainIndex++; // Move to next station
+        if (
+          appState.currentTrainIndex <
+          appState.stations.length - 1
+        ) {
+          appState.currentTrainIndex++;
         } else {
-          // Reached last station, turn around
           appState.isMovingForward = false;
           appState.currentTrainIndex--;
         }
       } else {
-        // Going backward
         if (appState.currentTrainIndex > 0) {
-          appState.currentTrainIndex--; // Move to previous station
+          appState.currentTrainIndex--;
         } else {
-          // Reached first station, turn around
           appState.isMovingForward = true;
           appState.currentTrainIndex++;
         }
       }
 
-      // Start moving train to next station
       updateTrainPosition(appState.currentTrainIndex, true);
 
-      // Wait for movement to finish, then repeat
-      setTimeout(moveToNextStation, TRAIN_CONFIG.MOVE_TIME);
+      setTimeout(
+        moveToNextStation,
+        TRAIN_CONFIG.MOVE_TIME
+      );
     }, TRAIN_CONFIG.STOP_TIME);
   };
 
-  // Start the animation loop
   moveToNextStation();
 }
 
-// Draw all station dots on the map
+// Draw station dots
 export function renderMap(mapLine) {
-  // Remove old station dots
-  const existingDots = mapLine.querySelectorAll(".station-dot");
+  const existingDots =
+    mapLine.querySelectorAll(".station-dot");
+
   existingDots.forEach((dot) => dot.remove());
 
-  // Create new dots for each station
-  appState.stations.forEach((s, index) => {
+  appState.stations.forEach((station, index) => {
     const dot = document.createElement("div");
 
-    // Highlight selected station with "selected" class
     dot.className =
-      "station-dot" + (s.id === appState.currentStationId ? " selected" : "");
-    dot.dataset.id = s.id;
+      "station-dot" +
+      (station.id === appState.currentStationId
+        ? " selected"
+        : "");
+
+    dot.dataset.id = station.id;
     dot.dataset.index = index;
 
-    // Add station name label
     const label = document.createElement("span");
-    label.textContent = s.name;
-    dot.appendChild(label);
+    label.textContent = station.name;
 
+    dot.appendChild(label);
     mapLine.appendChild(dot);
   });
 }
 
-// Create and initialize the train element
+// Create train
 export function initializeTrain(mapLine) {
   if (!appState.trainElement) {
-    appState.trainElement = document.createElement("div");
+    appState.trainElement =
+      document.createElement("div");
+
     appState.trainElement.className = "train-icon";
     appState.trainElement.textContent = "🚆";
+
     mapLine.appendChild(appState.trainElement);
   }
 
-  // Start train at first station
   appState.currentTrainIndex = 0;
+
   updateTrainPosition(0, false);
 }
 
-// Populate station dropdown with options
+// Populate station dropdown
 export function populateStationDropdown(selectElement) {
   selectElement.innerHTML =
     "<option value=''>Select Station</option>" +
     appState.stations
-      .map((s) => `<option value="${s.id}">${s.name}</option>`)
+      .map(
+        (station) =>
+          `<option value="${station.id}">${station.name}</option>`
+      )
       .join("");
 }
 
-// Get announcements for a specific station
-export async function loadAnnouncements(stationId, token = null) {
-  const headers = token ? { Authorization: "Bearer " + token } : {};
-  const res = await fetch(`/api/v1/stations/${stationId}/announcements`, {
-    headers,
-  });
+// Load announcements
+export async function loadAnnouncements(
+  stationId,
+  token = null
+) {
+  const headers = token
+    ? {
+        Authorization: "Bearer " + token,
+      }
+    : {};
+
+  const res = await fetch(
+    `/api/v1/stations/${stationId}/announcements`,
+    {
+      headers,
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to load announcements");
+  }
+
   return await res.json();
 }
 
-// Add one announcement to the list
+// Add announcement to list
 export function addAnnouncementToList(
   announcementList,
   announcement,
   toTop = false
 ) {
   const li = document.createElement("li");
+
   li.className = "announcement-item";
 
-  // Format time nicely
-  const time = new Date(announcement.createdAt || Date.now());
+  const time = new Date(
+    announcement.createdAt || Date.now()
+  );
+
   li.innerHTML = `
     <div>${announcement.text}</div>
     <time>${time.toLocaleTimeString()}</time>
   `;
 
-  // Add to top (for new announcements) or bottom (for old ones)
-  if (toTop && announcementList.firstChild) {
-    announcementList.insertBefore(li, announcementList.firstChild);
+  if (
+    toTop &&
+    announcementList.firstChild
+  ) {
+    announcementList.insertBefore(
+      li,
+      announcementList.firstChild
+    );
   } else {
     announcementList.appendChild(li);
   }
 }
 
-// Display all announcements in the list
-export function displayAnnouncements(announcementList, announcements) {
+// Display announcements
+export function displayAnnouncements(
+  announcementList,
+  announcements
+) {
   announcementList.innerHTML = "";
-  announcements.forEach((a) =>
-    addAnnouncementToList(announcementList, a, false)
-  );
+
+  announcements.forEach((announcement) => {
+    addAnnouncementToList(
+      announcementList,
+      announcement,
+      false
+    );
+  });
 }
 
-// Load stations from server with optional token
+// Fetch stations
 export async function fetchStations(token = null) {
-  const headers = token ? { Authorization: "Bearer " + token } : {};
-  const res = await fetch("/api/v1/stations", { headers });
+  const headers = token
+    ? {
+        Authorization: "Bearer " + token,
+      }
+    : {};
+
+  const res = await fetch(
+    "/api/v1/stations",
+    {
+      headers,
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to load stations");
+  }
+
   return await res.json();
 }
 
-// Try to use preloaded stations or fetch from server
-export async function loadStationsWithPreload(token = null) {
-  // Check if stations were preloaded in HTML
+// Load stations with preload
+export async function loadStationsWithPreload(
+  token = null
+) {
   if (
     window.preloadedData &&
     window.preloadedData.stations &&
     window.preloadedData.stations.length > 0
   ) {
     console.log("Using preloaded stations");
+
     return window.preloadedData.stations;
-  } else {
-    // Fallback: fetch from server
-    console.log("Fetching stations (preload not available)");
-    return await fetchStations(token);
   }
+
+  console.log(
+    "Fetching stations (preload not available)"
+  );
+
+  return await fetchStations(token);
 }
 
-// Handle station selection change
+// Handle station change
 export function handleStationChange(
   socket,
   newStationId,
@@ -207,52 +262,110 @@ export function handleStationChange(
   return async () => {
     if (!newStationId) return;
 
-    // Leave previous station room
+    // Leave old station
     if (appState.currentStationId) {
-      socket.emit("leaveStation", appState.currentStationId);
+      socket.emit(
+        "leaveStation",
+        appState.currentStationId
+      );
     }
 
-    // Join new station room
+    // Set new station
     appState.currentStationId = newStationId;
-    const stationName = appState.stations.find(
-      (s) => s.id === newStationId
-    ).name;
 
-    // Update all title elements
-    titleElements.forEach((el) => {
-      if (el) el.textContent = stationName;
+    const selectedStation =
+      appState.stations.find(
+        (station) =>
+          station.id === newStationId
+      );
+
+    if (!selectedStation) return;
+
+    // Update titles
+    titleElements.forEach((element) => {
+      if (element) {
+        element.textContent =
+          selectedStation.name;
+      }
     });
 
-    // Tell server we joined this station
-    socket.emit("joinStation", appState.currentStationId);
-
-    // Load announcements for this station
-    const announcements = await loadAnnouncements(
-      appState.currentStationId,
-      token
+    // Join station room
+    socket.emit(
+      "joinStation",
+      appState.currentStationId
     );
-    displayAnnouncements(announcementList, announcements);
 
-    // Update map to highlight selected station
+    // Load announcements
+    try {
+      const data =
+        await loadAnnouncements(
+          appState.currentStationId,
+          token
+        );
+
+      displayAnnouncements(
+        announcementList,
+        data.announcements || []
+      );
+    } catch (error) {
+      console.error(
+        "Failed to load announcements:",
+        error
+      );
+
+      announcementList.innerHTML = "";
+    }
+
+    // Update map
     renderMap(mapLine);
   };
 }
 
-// Setup socket event listeners
-export function setupSocketListeners(socket, announcementList, viewersText) {
-  // When new announcement arrives via Socket.IO
-  socket.on("announcement", (a) => {
-    // Only show if it's for the station we're watching
-    if (a.stationId === appState.currentStationId) {
-      addAnnouncementToList(announcementList, a, true);
-    }
-  });
+// Setup Socket.IO listeners
+export function setupSocketListeners(
+  socket,
+  announcementList,
+  viewersText
+) {
+  // New announcement
+  socket.on(
+    "newAnnouncement",
+    (announcement) => {
+      console.log(
+        "New announcement received:",
+        announcement
+      );
 
-  // When viewer count updates via Socket.IO
-  socket.on("presenceUpdate", ({ stationId, watchers }) => {
-    // Only update if it's for the station we're watching
-    if (stationId === appState.currentStationId) {
-      viewersText.textContent = "Live viewers: " + watchers;
+      if (
+        announcement.stationId ===
+        appState.currentStationId
+      ) {
+        addAnnouncementToList(
+          announcementList,
+          announcement,
+          true
+        );
+      }
     }
-  });
+  );
+
+  // Viewer count update
+  socket.on(
+    "presenceUpdate",
+    ({ stationId, count }) => {
+      console.log(
+        "Presence update:",
+        stationId,
+        count
+      );
+
+      if (
+        stationId ===
+        appState.currentStationId
+      ) {
+        viewersText.textContent =
+          "Live viewers: " + count;
+      }
+    }
+  );
 }

@@ -1,6 +1,6 @@
 import Announcement from "../models/Announcement.js";
+import { getIo } from "../sockets/ioInstance.js";
 
-// Get all announcements for a specific station (newest first)
 // Get announcements for a specific station with pagination & filtering
 export async function getAnnouncementsForStation(
   stationId,
@@ -39,10 +39,24 @@ export async function getAnnouncementsForStation(
 
 // Create a new announcement for a station
 export async function createAnnouncement(stationId, text) {
+  // Save announcement to MongoDB first
   const doc = await Announcement.create({
     stationId,
     text,
   });
 
-  return doc.toObject();
+  const announcement = doc.toObject();
+
+  // Get Socket.IO instance
+  const io = getIo();
+
+  // Broadcast only after the database save succeeds
+  if (io) {
+    io.to(`station:${stationId}`).emit(
+      "newAnnouncement",
+      announcement
+    );
+  }
+
+  return announcement;
 }

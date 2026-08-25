@@ -21,8 +21,8 @@ router.get("/:id/announcements", stationAnnouncements);
 // Admin only
 router.post(
   "/:id/announcements",
-  announcementValidation,
   requireAdmin,
+  announcementValidation,
   createAnnouncementController
 );
 export default router;
