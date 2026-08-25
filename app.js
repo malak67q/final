@@ -6,14 +6,16 @@ import rateLimit from "express-rate-limit";
 
 import authRoutes from "./routes/authRoutes.js";
 import stationRoutes from "./routes/stationRoutes.js";
-
+import { ensureAdminSeed } from "./services/authService.js";
 // Get current file and directory paths
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Create Express application
 const app = express();
-
+ensureAdminSeed().catch((err) => {
+  console.error("Admin seed error:", err);
+});
 // Allow requests from other websites
 app.use(cors());
 

@@ -1,9 +1,11 @@
 import request from "supertest";
 import app from "../app.js";
 import { connectDB } from "../config/db.js";
+import { ensureAdminSeed } from "../services/authService.js";
 
 beforeAll(async () => {
   await connectDB();
+  await ensureAdminSeed();
 });
 
 test("POST announcement without token should be rejected", async () => {
