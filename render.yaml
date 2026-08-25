@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: metrosync
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
